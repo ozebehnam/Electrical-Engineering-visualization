@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v4.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.13.0/d3-legend.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+<style>
+* {box-sizing: border-box}
+body {font-family: "Lato", sans-serif;}
+	button#play,#play1,#play2,#play3{
+		width: 4em;
+		height: 1.5em;
+		background: rgb(53, 135, 212);
+		border: 1px solid rgb(53, 135, 212);
+		border-radius: 4px;
+		color: white;
+		font-size: .7em;
+	}
+	
+.tab {
+  float: left;
+  border: 1px solid #ccc;
+  background-color: #f1f1f1;
+  width: 20%;
+  height: 700px;
+}
+
+.dot {
+  stroke: #000;
+}
+
+/* Style the buttons inside the tab */
+.tab button {
+  display: block;
+  background-color: inherit;
+  color: black;
+  padding: 22px 16px;
+  height: 10%;
+  width:100%;
+  border: none;
+  outline: none;
+  text-align: left;
+  cursor: pointer;
+  transition: 0.3s;
+  font-size: 17px;
+}
+
+.tabempty{
+	height:60%;
+	width: 20%
+}
+
+/* Change background color of buttons on hover */
+.tab button:hover {
+  background-color: #ddd;
+}
+
+/* Create an active/current "tab button" class */
+.tab button.active {
+  background-color: #ccc;
+}
+
+/* Style the tab content */
+.tabcontent {
+  float: right;
+  padding: 0px 12px;
+  border: 1px solid #ccc;
+  width: 80%;
+  height:700px;
+  border-left: none;
+}
+
+</style>
+<body>
+
+<div class="tab">
+  <button class="tablinks" onclick="openTab(event, 'aperture_cont')" id="defaultOpen">aperture</button>
+  <button class="tablinks" onclick="openTab(event, 'energy_cont')">energy</button>
+  <button class="tablinks" onclick="openTab(event, 'waldenfomspeed_cont')">waldenfomspeed</button>
+   <button class="tablinks" onclick="openTab(event, 'schreierfomspeed_cont')">schreierfomspeed</button>
+   <div class="tabempty"></div>
+</div>
+
+<div id="aperture_cont" class="tabcontent">
+  <h3>aperture</h3>
+  <input id="slider1" type="range" min="1997" max="2021" value="1997" step="1" />
+  <span id="range1">1997</span>
+  <button name="play1" id="play1">Play</button>
+  Show Venn: <input type="checkbox" id="myCheck" onclick="venn('aperture')" >
+
+  <div id="aperture"></div>
+  <div id="aperture-venn" style="display: none;"></div>
+</div>
+
+<div id="energy_cont" class="tabcontent">
+  <h3>energy</h3>
+  <input id="slider2" type="range" min="1997" max="2021" value="1997" step="1" />
+  <span id="range2">1997</span>
+  <button name="play2" id="play2">Play</button>
+  Show Venn: <input type="checkbox" id="myCheck1" onclick="venn('energy')" >
+
+  <div id="energy"></div>
+  <div id="energy-venn" style="display: none;"></div>
+</div>
+
+<div id="waldenfomspeed_cont" class="tabcontent">
+  <h3>waldenfomspeed</h3>
+  <input  id="slider3" type="range" min="1997" max="2021" value="1997" step="1" />
+  <span  id="range3">1997</span>
+  <button name="play3" id="play3">Play</button>
+  Show Venn: <input type="checkbox" id="myCheck2" onclick="venn('waldenfomspeed')" >
+
+  <div id="waldenfomspeed"></div>
+  <div id="waldenfomspeed-venn" style="display: none;"></div>
+</div>
+
+<div id="schreierfomspeed_cont" class="tabcontent">
+  <h3>schreierfomspeed</h3>
+  <input id="slider" type="range" min="1997" max="2021" value="1997" step="1" />
+  <span id="range">1997</span>
+  <button name="play" id="play">Play</button>
+  Show Venn: <input type="checkbox" id="myCheck3" onclick="venn('schreier')" >
+
+  <div id="schreierfomspeed"></div>
+  <div id="schreierfomspeed-venn" style="display: none;"></div>
+</div>
+</body>
+
+
+<script>
+	
+function openTab(evt, tabName) {
+  var i, tabcontent, tablinks;
+  tabcontent = document.getElementsByClassName("tabcontent");
+  for (i = 0; i < tabcontent.length; i++) {
+    tabcontent[i].style.display = "none";
+  }
+  tablinks = document.getElementsByClassName("tablinks");
+  for (i = 0; i < tablinks.length; i++) {
+    tablinks[i].className = tablinks[i].className.replace(" active", "");
+  }
+  document.getElementById(tabName).style.display = "block";
+  evt.currentTarget.className += " active";
+}
+// Get the element with id="defaultOpen" and click on it
+document.getElementById("defaultOpen").click();
+
+// set the dimensions and margins of the graph
+var margin = {top: 10, right: 30, bottom: 30, left: 100},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+var color = d3.scaleOrdinal(d3.schemeCategory10).domain(["VLSI", "VLSI 2021", "ISSCC", "ISSCC 2021"]);
+
+draw_aperture();
+draw_energy();
+draw_WaldenFOMSpeed();
+draw_SchreierFOMSpeed();
+
+draw_Walden_Venn();
+draw_energy_venn();
+draw_aperture_venn();
+draw_Schreier_venn();
+
+// append the svg object to the body of the page
+function draw_aperture(){
+	var svg = d3.select("#aperture")
+	  .append("svg")
+		.attr("width", width + margin.left + margin.right)
+		.attr("height", height + margin.top + margin.bottom)
+	  .append("g")
+		.attr("transform",
+			  "translate(" + margin.left + "," + margin.top + ")");
+
+   var legend = svg
+    .selectAll("legend")
+    .data(color.domain())
+    .enter()
+    .append("g")
+    .attr("class", "legend")
+    .attr("transform", function(d, i) {
+      return "translate(0," + i * 20 + ")";
+    });
+
+  legend
+    .append("rect")
+    .attr("x", width - 18)
+    .attr("width", 18)
+    .attr("height", 18)
+    .style("fill", color);
+
+  legend
+    .append("text")
+    .attr("x", width - 24)
+    .attr("y", 9)
+    .attr("dy", ".35em")
+    .style("text-anchor", "end")
+    .text(function(d) {
+      return d;
+    });
+
+	//Read the data
+	d3.csv('data.csv', function(data) {
+
+	console.log(data); 
+	  // Add X axis
+	  var x = d3.scaleLinear()
+		.domain([10, 120])
+		.range([ 0, width ]);
+	  svg.append("g")
+		.attr("transform", "translate(0," + height + ")")
+		.call(d3.axisBottom(x));
+
+	  // Add Y axis
+	  var y = d3.scaleLog()
+		.domain([1e+0,1e+11])
+		.range([ height, 0]);
+	  svg.append("g")
+		.call(d3.axisLeft(y));
+
+	// basic shape tuturial : https://lucidar.me/en/d3.js/part-06-basic-shapes/
+
+	  // Add dots
+	  svg.append('g')
+		.selectAll("dot")
+		.data(data)
+		.enter()
+		.append("circle")
+		  .attr("cx", function (d) { 
+		  console.log(d["YEAR"]==='1997');
+		  if(d["YEAR"]==='1997'){
+		  return x(d["SNDR_plot [dB]"]);
+		  } else {
+		  return x(10);
+		  } 
+		  })
+		  .attr("cy", function (d) { 
+		  if(d["YEAR"]=='1997'){
+		  return y(d["fin_hf [Hz]"]);
+		  } else {
+		  return y(1e+06);
+		  }  } )
+		  .attr("r", 3.5)
+		  .style("fill",function (d) { 
+			if(d["source"]=="ISSCC"&&d["YEAR"]==2021){
+				return "rgb(214, 39, 40)";
+			} 
+			else if(d["source"]=="ISSCC"){
+				return "rgb(44, 160, 44)";
+			}
+			else if(d["source"]=="VLSI"&&d["YEAR"]==2021){
+				return "rgb(255, 127, 14)";
+			}
+			else{
+				return "rgb(31, 119, 180)";
+			}		
+			})
+
+			svg.append("line")
+                .attr("x1", function (d) { return x(144); })
+                .attr("y1", function (d) { return y(10000); })
+                .attr("x2", function (d) { return x(4); })
+                .attr("y2", function (d) { return y(100000000000); })
+                .attr("stroke-width", 2)
+                .attr("stroke", "black");
+
+			svg.append("line")
+                .attr("x1", function (d) { return x(164); })
+                .attr("y1", function (d) { return y(10000); })
+                .attr("x2", function (d) { return x(24); })
+                .attr("y2", function (d) { return y(100000000000); })
+                .attr("stroke-dasharray", 2)
+                .attr("stroke", "black");
+
+
+				
+
+		var running = false;
+		var timer;
+		var last_year;
+
+		$("#play1").on("click", function() {
+			var duration = 1000,
+				maxstep = 2021,
+				minstep = 1997;
+			
+			if (running == true) {
+				$("#play1").html("Play");
+				running = false;
+				clearInterval(timer);
+			}else if (running == false) {
+			
+				$("#play1").html("Pause");
+				
+				sliderValue = $("#slider1").val();
+				timer = setInterval( function(){
+						if (sliderValue <= maxstep){
+							sliderValue++;
+							last_year = document.getElementById("slider1").value;
+							$("#slider1").val(sliderValue);
+							$('#range1').html(sliderValue);
+							update___();
+						}else{
+							$("#play1").html("Play");
+							running = false;
+							clearInterval(timer);
+						}
+						// $("#slider").val(sliderValue);
+					
+				}, duration);
+				running = true;
+			}
+
+		});			
+			
+	 $("#slider1").on("change", function(){
+			update___();
+			$("#range1").html($("#slider1").val());
+			clearInterval(timer);
+			$("play1").html("Play");
+		});
+	
+		update___ = function() {
+			console.log(document.getElementById("slider1").value)
+		svg.selectAll("circle")
+			.data(data)
+			.transition()
+			.attr("cx", function (d) { if(d["YEAR"]<= document.getElementById("slider1").value){return x(d["SNDR_plot [dB]"]);} else{return x(10);} } )
+			.attr("cy", function (d) { if(d["YEAR"]<= document.getElementById("slider1").value){return y(d["fin_hf [Hz]"]);} else{return y(1e+06);} } )
+		    .attr("r", 3.5)
+			.style("fill",function (d) { 
+				if(d["source"]=="ISSCC"&&d["YEAR"]==2021){
+				return "rgb(214, 39, 40)";
+			} 
+			else if(d["source"]=="ISSCC"){
+				return "rgb(44, 160, 44)";
+			}
+			else if(d["source"]=="VLSI"&&d["YEAR"]==2021){
+				return "rgb(255, 127, 14)";
+			}
+			else{
+				return "rgb(31, 119, 180)";
+			}		
+			});
+
+		}
+
+	})
+}
+
+function draw_energy(){
+	var svg = d3.select("#energy")
+	  .append("svg")
+		.attr("width", width + margin.left + margin.right)
+		.attr("height", height + margin.top + margin.bottom)
+	  .append("g")
+		.attr("transform",
+			  "translate(" + margin.left + "," + margin.top + ")");
+
+			  var legend = svg
+    .selectAll("legend")
+    .data(color.domain())
+    .enter()
+    .append("g")
+    .attr("class", "legend")
+    .attr("transform", function(d, i) {
+      return "translate(0," + i * 20 + ")";
+    });
+
+  legend
+    .append("rect")
+    .attr("x", width - 18)
+    .attr("width", 18)
+    .attr("height", 18)
+    .style("fill", color);
+
+  legend
+    .append("text")
+    .attr("x", width - 24)
+    .attr("y", 9)
+    .attr("dy", ".35em")
+    .style("text-anchor", "end")
+    .text(function(d) {
+      return d;
+    });
+
+	//Read the data
+	d3.csv('data.csv', function(data) {
+
+	  // Add X axis
+	  var x = d3.scaleLinear()
+		.domain([10, 120])
+		.range([ 0, width ]);
+	  svg.append("g")
+		.attr("transform", "translate(0," + height + ")")
+		.call(d3.axisBottom(x));
+
+	  // Add Y axis
+	  var y = d3.scaleLog()
+		.domain([0.1,1.0E7])
+		.range([ height, 0]);
+	  svg.append("g")
+		.call(d3.axisLeft(y));
+
+	  // Add dots
+	  svg.append('g')
+		.selectAll("dot")
+		.data(data)
+		.enter()
+		.append("circle")
+		  .attr("cx", function (d) { if(d["YEAR"]==='1997'){return x(d["SNDR_plot [dB]"])}else {return x(10)} } )
+		  .attr("cy", function (d) { if(d["YEAR"]==='1997'){return y(d["P/fsnyq [pJ]"])}else {return y(0.1)}  } )
+		  .attr("r", 3.5)
+		  .style("fill",function (d) { 
+			if(d["source"]=="ISSCC"&&d["YEAR"]==2021){
+				return "rgb(214, 39, 40)";
+			} 
+			else if(d["source"]=="ISSCC"){
+				return "rgb(44, 160, 44)";
+			}
+			else if(d["source"]=="VLSI"&&d["YEAR"]==2021){
+				return "rgb(255, 127, 14)";
+			}
+			else{
+				return "rgb(31, 119, 180)";
+			}		
+			});
+
+			svg.append("line")
+                .attr("x1", function (d) { return x(10); })
+                .attr("y1", function (d) { return y(1.58e-06); })
+                .attr("x2", function (d) { return x(120); })
+                .attr("y2", function (d) { return y(1.58e+05); })
+                .attr("stroke-width", 2)
+                .attr("stroke", "black");
+
+			svg.append("line")
+                .attr("x1", function (d) { return x(10); })
+                .attr("y1", function (d) { return y(2.58e-03); })
+                .attr("x2", function (d) { return x(120); })
+                .attr("y2", function (d) { return y(8.18e+02); })
+                .attr("stroke-dasharray", 2)
+                .attr("stroke", "black");
+	  
+	  	var running = false;
+		var timer;
+		var last_year;
+
+		$("#play2").on("click", function() {
+		
+			var duration = 1000,
+				maxstep = 2021,
+				minstep = 1997;
+			
+			if (running == true) {
+				$("#play2").html("Play");
+				running = false;
+				clearInterval(timer);
+			}else if (running == false) {
+			
+				$("#play2").html("Pause");
+				
+				sliderValue = $("#slider2").val();
+				timer = setInterval( function(){
+						if (sliderValue <= maxstep){
+							sliderValue++;
+							last_year = document.getElementById("slider2").value;
+							$("#slider2").val(sliderValue);
+							$('#range2').html(sliderValue);
+							update__();
+						}else{
+							$("#play2").html("Play");
+							running = false;
+							clearInterval(timer);
+						}
+						// $("#slider").val(sliderValue);
+					
+				}, duration);
+				running = true;
+			}
+
+		});			
+			
+	 $("#slider2").on("change", function(){
+			update__();
+			$("#range2").html($("#slider2").val());
+			clearInterval(timer);
+			$("play2").html("Play");
+		});
+	
+		update__ = function() {
+			console.log(document.getElementById("slider2").value)
+		// d3.selectAll('circle').remove();
+		svg.selectAll("circle")
+			.data(data)
+			.transition()
+		  .attr("cx", function (d) { if(d["YEAR"]<=document.getElementById("slider2").value){return x(d["SNDR_plot [dB]"]);}else { return x(10);} } )
+		  .attr("cy", function (d) { if(d["YEAR"]<=document.getElementById("slider2").value){return y(d["P/fsnyq [pJ]"]);}else{return y(0.1)}  } )
+			.attr("r", 3.5)
+			.style("fill",function (d) { 
+				if(d["source"]=="ISSCC"&&d["YEAR"]==2021){
+				return "rgb(214, 39, 40)";
+			} 
+			else if(d["source"]=="ISSCC"){
+				return "rgb(44, 160, 44)";
+			}
+			else if(d["source"]=="VLSI"&&d["YEAR"]==2021){
+				return "rgb(255, 127, 14)";
+			}
+			else{
+				return "rgb(31, 119, 180)";
+			}		
+			});
+
+		}
+	});
+
+
+}
+
+function draw_WaldenFOMSpeed(){
+	var svg = d3.select("#waldenfomspeed")
+	  .append("svg")
+		.attr("width", width + margin.left + margin.right)
+		.attr("height", height + margin.top + margin.bottom)
+	  .append("g")
+		.attr("transform",
+			  "translate(" + margin.left + "," + margin.top + ")");
+   var legend = svg
+    .selectAll("legend")
+    .data(color.domain())
+    .enter()
+    .append("g")
+    .attr("class", "legend")
+    .attr("transform", function(d, i) {
+      return "translate(0," + i * 20 + ")";
+    });
+
+  legend
+    .append("rect")
+    .attr("x", width - 18)
+    .attr("width", 18)
+    .attr("height", 18)
+    .style("fill", color);
+
+  legend
+    .append("text")
+    .attr("x", width - 24)
+    .attr("y", 9)
+    .attr("dy", ".35em")
+    .style("text-anchor", "end")
+    .text(function(d) {
+      return d;
+    });
+	//Read the data
+	d3.csv('data.csv', function(data) {
+
+	  // Add X axis
+	  var x = d3.scaleLog()
+		.domain([10000.0, 1.0E12])
+		.range([ 0, width ]);
+	  svg.append("g")
+		.attr("transform", "translate(0," + height + ")")
+		.call(d3.axisBottom(x));
+
+	  // Add Y axis
+	  var y = d3.scaleLog()
+		.domain([0.1,10000.0])
+		.range([ height, 0]);
+	  svg.append("g")
+		.call(d3.axisLeft(y));
+
+	  // Add dots
+	  svg.append('g')
+		.selectAll("dot")
+		.data(data)
+		.enter()
+		.append("circle")
+		  .attr("cx", function (d) { if(d["YEAR"]==='1997'){return x(d["fsnyq [Hz]"]);}else{return x(10000);}  } )
+		  .attr("cy", function (d) { if(d["YEAR"]==='1997'){return y(d["FOMW_hf [fJ/conv-step]"]);}else{return y(0.2);} } )
+		  .attr("r", 3.5)
+		  .style("fill",function (d) { 
+			if(d["source"]=="ISSCC"&&d["YEAR"]==2021){
+				return "#69b3a2";
+			} 
+			else if(d["source"]=="ISSCC"){
+				return "#f06292";
+			}
+			else if(d["source"]=="VLSI"&&d["YEAR"]==2021){
+				return "#e6510";
+			}
+			else{
+				return "#006064";
+			}		
+			});
+
+  var Gen = d3.line()
+  .x((p) => x(p.f))
+  .y((p) => y(p.Envelope))
+  .curve(d3.curveCardinal);
+
+  d3.csv('lines.csv', function(data) {
+	svg.append("path")
+  .attr("d", Gen(data))
+  .attr("fill", "none")
+  .attr("stroke", "black")
+  .attr("stroke-dasharray",3);
+	});
+	
+		var running = false;
+		var timer;
+		var last_year;
+
+		$("#play3").on("click", function() {
+		
+			var duration = 1000,
+				maxstep = 2021,
+				minstep = 1997;
+			
+			if (running == true) {
+				$("#play3").html("Play");
+				running = false;
+				clearInterval(timer);
+			}else if (running == false) {
+			
+				$("#play3").html("Pause");
+				
+				sliderValue = $("#slider3").val();
+				timer = setInterval( function(){
+						if (sliderValue <= maxstep){
+							sliderValue++;
+							last_year = document.getElementById("slider3").value;
+							$("#slider3").val(sliderValue);
+							$('#range3').html(sliderValue);
+							update_();
+						}else{
+							$("#play3").html("Play");
+							running = false;
+							clearInterval(timer);
+						}
+						// $("#slider").val(sliderValue);
+					
+				}, duration);
+				running = true;
+			}
+
+		});			
+			
+	 $("#slider3").on("change", function(){
+			update_();
+			$("#range3").html($("#slider3").val());
+			clearInterval(timer);
+			$("play3").html("Play");
+		});
+	
+		update_ = function() {
+			console.log(document.getElementById("slider3").value)
+		// d3.selectAll('circle').remove();
+		svg.selectAll("circle")
+			.data(data)
+			.transition()
+			.attr("cx", function (d) { if(d["YEAR"]<=document.getElementById("slider3").value){return x(d["fsnyq [Hz]"]);}else{return x(10000)}  } )
+			.attr("cy", function (d) { if(d["YEAR"]<=document.getElementById("slider3").value){return y(d["FOMW_hf [fJ/conv-step]"]);}else{return y(0.2)}  } )
+			.attr("r", 3.5)
+			.style("fill",function (d) { 
+				if(d["source"]=="ISSCC"&&d["YEAR"]==2021){
+				return "rgb(214, 39, 40)";
+			} 
+			else if(d["source"]=="ISSCC"){
+				return "rgb(44, 160, 44)";
+			}
+			else if(d["source"]=="VLSI"&&d["YEAR"]==2021){
+				return "rgb(255, 127, 14)";
+			}
+			else{
+				return "rgb(31, 119, 180)";
+			}	
+			});
+
+		} 	
+  });
+ 	
+}
+
+function draw_SchreierFOMSpeed(){
+	var svg = d3.select("#schreierfomspeed")
+	  .append("svg")
+		.attr("width", width + margin.left + margin.right)
+		.attr("height", height + margin.top + margin.bottom)
+	  .append("g")
+		.attr("transform",
+			  "translate(" + margin.left + "," + margin.top + ")");
+			  var legend = svg
+    .selectAll("legend")
+    .data(color.domain())
+    .enter()
+    .append("g")
+    .attr("class", "legend")
+    .attr("transform", function(d, i) {
+      return "translate(0," + i * 20 + ")";
+    });
+
+  legend
+    .append("rect")
+    .attr("x", width - 18)
+    .attr("width", 18)
+    .attr("height", 18)
+    .style("fill", color);
+
+  legend
+    .append("text")
+    .attr("x", width - 24)
+    .attr("y", 9)
+    .attr("dy", ".35em")
+    .style("text-anchor", "end")
+    .text(function(d) {
+      return d;
+    });
+	//Read the data
+	d3.csv('data.csv', function(data) {
+
+	  // Add X axis
+	  var x = d3.scaleLog()
+		.domain([100.0, 1.0E12])
+		.range([ 0, width ]);
+	  svg.append("g")
+		.attr("transform", "translate(0," + height + ")")
+		.call(d3.axisBottom(x));
+
+	  // Add Y axis
+	  var y = d3.scaleLinear()
+		.domain([120,190])
+		.range([ height, 0]);
+	  svg.append("g")
+		.call(d3.axisLeft(y));
+	 var showing_data = data.filter(d => d["YEAR"] === '1997');
+
+	  // Add dots
+	  svg.append('g')
+		.selectAll("dot")
+		.data(data)
+		.enter()
+		.append("circle")
+		.transition()
+		  .attr("cx", function (d) { if(d["YEAR"]==='1997'){return x(d["fsnyq [Hz]"]);}else{return x(100)}  } )
+		  .attr("cy", function (d) { if(d["YEAR"]==='1997'){return y(d["FOMS_hf [dB]"]);}else{return y(120)}  } )
+		  .attr("r", 3.5)
+		  .style("fill",function (d) { 
+			if(d["source"]=="ISSCC"&&d["YEAR"]==2021){
+				return "rgb(214, 39, 40)";
+			} 
+			else if(d["source"]=="ISSCC"){
+				return "rgb(44, 160, 44)";
+			}
+			else if(d["source"]=="VLSI"&&d["YEAR"]==2021){
+				return "rgb(255, 127, 14)";
+			}
+			else{
+				return "rgb(31, 119, 180)";
+			}		
+			});
+
+			var Gen = d3.line()
+ 						 .x((p) => x(p.f))
+ 						 .y((p) => y(p.EnvelopeD))
+ 						 .curve(d3.curveCardinal);
+
+			d3.csv('lines.csv', function(data) {
+				svg.append("path")
+			.attr("d", Gen(data))
+			.attr("fill", "none")
+			.attr("stroke", "black")
+			.attr("stroke-dasharray",4);		
+		});
+
+		var running = false;
+		var timer;
+		var last_year;
+
+		$("#play").on("click", function() {
+		
+			var duration = 1000,
+				maxstep = 2021,
+				minstep = 1997;
+			
+			if (running == true) {
+				$("#play").html("Play");
+				running = false;
+				clearInterval(timer);
+			}else if (running == false) {
+			
+				$("#play").html("Pause");
+				
+				sliderValue = $("#slider").val();
+				timer = setInterval( function(){
+						if (sliderValue <= maxstep){
+							sliderValue++;
+							last_year = document.getElementById("slider").value;
+							$("#slider").val(sliderValue);
+							$('#range').html(sliderValue);
+							update();
+						}else{
+							$("#play").html("Play");
+							running = false;
+							clearInterval(timer);
+						}
+						// $("#slider").val(sliderValue);
+					
+				}, duration);
+				running = true;
+			}
+
+		});			
+			
+	 $("#slider").on("change", function(){
+			update();
+			$("#range").html($("#slider").val());
+			clearInterval(timer);
+			$("play").html("Play");
+		});
+	
+		update = function() {
+			console.log(document.getElementById("slider").value)
+		// d3.selectAll('circle').remove();
+		svg.selectAll("circle")
+			.data(data)
+			.transition()
+			.attr("cx", function (d) { if(d["YEAR"]<=document.getElementById("slider").value ){return x(d["fsnyq [Hz]"]);}else{return x(100)}  } )
+		    .attr("cy", function (d) { if(d["YEAR"]<=document.getElementById("slider").value ){return y(d["FOMS_hf [dB]"]);}else{return y(120)}  } )
+			.attr("r", 3.5)
+			.style("fill",function (d) { 
+				if(d["source"]=="ISSCC"&&d["YEAR"]==2021){
+				return "rgb(214, 39, 40)";
+			} 
+			else if(d["source"]=="ISSCC"){
+				return "rgb(44, 160, 44)";
+			}
+			else if(d["source"]=="VLSI"&&d["YEAR"]==2021){
+				return "rgb(255, 127, 14)";
+			}
+			else{
+				return "rgb(31, 119, 180)";
+			}		
+			});
+
+		}
+
+	})
+}
+
+
+function draw_Walden_Venn(){
+
+	var x = d3.scaleLog().range([ 0, width ]);
+var y = d3.scaleLog().range([ height, 0]);
+
+var color = d3.scaleOrdinal(d3.schemeCategory10);
+
+var xAxis = d3.axisBottom(x);
+var yAxis = d3.axisLeft(y);
+
+var svg = d3
+  .select("#waldenfomspeed-venn")
+  .append("svg")
+  .attr("width", width + margin.left + margin.right)
+  .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+  .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  
+  
+  
+d3.tsv("output.tsv", function(error, data) {
+  if (error) throw error;
+
+  // Coerce the data to numbers.
+  data.forEach(function(d) {
+    d.x_walden = +d.x_walden;
+    d.y_walden = +d.y_walden;
+  });
+
+  x
+    .domain([10000.0, 2.0E11])
+    .nice();
+  y
+    .domain([0.2,10000.0])
+    .nice();
+
+
+  var nested = d3
+    .nest()
+    .key(function(d) {
+      return d.name_walden;
+    })
+    .rollup(function(d) {
+      return d.map(function(v) {
+        return [x(v.x_walden), y(v.y_walden)];
+      });
+    })
+    .entries(data);
+
+  svg
+    .append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(xAxis)
+    .append("text")
+    .attr("fill", "black")
+    .attr("class", "label")
+    .attr("x", width)
+    .attr("y", -6)
+    .style("text-anchor", "end")
+    .text("fin_hf [Hz]");
+
+  svg
+    .append("g")
+    .attr("class", "y axis")
+    .call(yAxis)
+    .append("text")
+    .attr("fill", "black")
+    .attr("class", "label")
+    .attr("transform", "rotate(-90)")
+    .attr("y", 6)
+    .attr("dy", ".71em")
+    .style("text-anchor", "end")
+    .text("SNDR_plot [dB]");
+
+  svg
+    .append("g")
+    .attr("class", "hulls")
+    .selectAll("polygon")
+    .data(nested)
+    .enter()
+    .append("polygon")
+    .attr("opacity", 0.1)
+    .attr("stroke-width", 30)
+    .attr("stroke-linejoin", "round")
+    .attr("fill", function(d) {
+      return color(d.key);
+    })
+    .attr("stroke", function(d) {
+      return color(d.key);
+    })
+    .attr("points", function(d) {
+      return d3.polygonHull(d.value);
+    });
+
+  svg
+    .append("g")
+    .attr("class", "dots")
+    .selectAll(".dot")
+    .data(data)
+    .enter()
+    .append("circle")
+    .attr("class", "dot")
+    .attr("r", 3.5)
+    .attr("cx", function(d) {
+      return x(d.x_walden);
+    })
+    .attr("cy", function(d) {
+      return y(d.y_walden);
+    })
+    .style("fill", function(d) {
+      return color(d.name_walden);
+    });
+
+  var legend = svg
+    .selectAll(".legend")
+    .data(color.domain())
+    .enter()
+    .append("g")
+    .attr("class", "legend")
+    .attr("transform", function(d, i) {
+      return "translate(0," + i * 20 + ")";
+    });
+
+  legend
+    .append("rect")
+    .attr("x", width - 18)
+    .attr("width", 18)
+    .attr("height", 18)
+    .style("fill", color);
+
+  legend
+    .append("text")
+    .attr("x", width - 24)
+    .attr("y", 9)
+    .attr("dy", ".35em")
+    .style("text-anchor", "end")
+    .text(function(d) {
+      return d;
+    });
+});
+}
+
+function draw_energy_venn(){
+	var x = d3.scaleLinear().range([ 0, width ]);
+var y = d3.scaleLog().range([ height, 0]);
+
+var color = d3.scaleOrdinal(d3.schemeCategory10);
+
+var xAxis = d3.axisBottom(x);
+var yAxis = d3.axisLeft(y);
+
+var svg = d3
+  .select("#energy-venn")
+  .append("svg")
+  .attr("width", width + margin.left + margin.right)
+  .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+  .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  
+  
+  
+d3.tsv("output.tsv", function(error, data) {
+  if (error) throw error;
+
+  // Coerce the data to numbers.
+  data.forEach(function(d) {
+    d.x_energy = +d.x_energy;
+    d.y_energy = +d.y_energy;
+  });
+
+  x
+    .domain([10, 120])
+    .nice();
+  y
+    .domain([0.1,1.0E7])
+    .nice();
+
+
+  var nested = d3
+    .nest()
+    .key(function(d) {
+      return d.name_energy;
+    })
+    .rollup(function(d) {
+      return d.map(function(v) {
+        return [x(v.x_energy), y(v.y_energy)];
+      });
+    })
+    .entries(data);
+
+  svg
+    .append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(xAxis)
+    .append("text")
+    .attr("fill", "black")
+    .attr("class", "label")
+    .attr("x", width)
+    .attr("y", -6)
+    .style("text-anchor", "end")
+    .text("fin_hf [Hz]");
+
+  svg
+    .append("g")
+    .attr("class", "y axis")
+    .call(yAxis)
+    .append("text")
+    .attr("fill", "black")
+    .attr("class", "label")
+    .attr("transform", "rotate(-90)")
+    .attr("y", 6)
+    .attr("dy", ".71em")
+    .style("text-anchor", "end")
+    .text("SNDR_plot [dB]");
+
+  svg
+    .append("g")
+    .attr("class", "hulls")
+    .selectAll("polygon")
+    .data(nested)
+    .enter()
+    .append("polygon")
+    .attr("opacity", 0.1)
+    .attr("stroke-width", 30)
+    .attr("stroke-linejoin", "round")
+    .attr("fill", function(d) {
+      return color(d.key);
+    })
+    .attr("stroke", function(d) {
+      return color(d.key);
+    })
+    .attr("points", function(d) {
+      return d3.polygonHull(d.value);
+    });
+
+  svg
+    .append("g")
+    .attr("class", "dots")
+    .selectAll(".dot")
+    .data(data)
+    .enter()
+    .append("circle")
+    .attr("class", "dot")
+    .attr("r", 3.5)
+    .attr("cx", function(d) {
+      return x(d.x_energy);
+    })
+    .attr("cy", function(d) {
+      return y(d.y_energy);
+    })
+    .style("fill", function(d) {
+      return color(d.name_energy);
+    });
+
+  var legend = svg
+    .selectAll(".legend")
+    .data(color.domain())
+    .enter()
+    .append("g")
+    .attr("class", "legend")
+    .attr("transform", function(d, i) {
+      return "translate(0," + i * 20 + ")";
+    });
+
+  legend
+    .append("rect")
+    .attr("x", width - 18)
+    .attr("width", 18)
+    .attr("height", 18)
+    .style("fill", color);
+
+  legend
+    .append("text")
+    .attr("x", width - 24)
+    .attr("y", 9)
+    .attr("dy", ".35em")
+    .style("text-anchor", "end")
+    .text(function(d) {
+      return d;
+    });
+});
+}
+
+function draw_aperture_venn(){
+	var x = d3.scaleLinear().range([ 0, width ]);
+var y = d3.scaleLog().range([ height, 0]);
+
+var color = d3.scaleOrdinal(d3.schemeCategory10);
+
+var xAxis = d3.axisBottom(x);
+var yAxis = d3.axisLeft(y);
+
+var svg = d3
+  .select("#aperture-venn")
+  .append("svg")
+  .attr("width", width + margin.left + margin.right)
+  .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+  .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  
+  
+  
+d3.tsv("output.tsv", function(error, data) {
+  if (error) throw error;
+
+  // Coerce the data to numbers.
+  data.forEach(function(d) {
+    d.x_aperture = +d.x_aperture;
+    d.y_aperture = +d.y_aperture;
+  });
+
+  x
+    .domain([10, 120])
+    .nice();
+  y
+    .domain([1,1e+11])
+    .nice();
+
+
+  var nested = d3
+    .nest()
+    .key(function(d) {
+      return d.name_aperture;
+    })
+    .rollup(function(d) {
+      return d.map(function(v) {
+        return [x(v.x_aperture), y(v.y_aperture)];
+      });
+    })
+    .entries(data);
+
+  svg
+    .append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(xAxis)
+    .append("text")
+    .attr("fill", "black")
+    .attr("class", "label")
+    .attr("x", width)
+    .attr("y", -6)
+    .style("text-anchor", "end")
+    .text("fin_hf [Hz]");
+
+  svg
+    .append("g")
+    .attr("class", "y axis")
+    .call(yAxis)
+    .append("text")
+    .attr("fill", "black")
+    .attr("class", "label")
+    .attr("transform", "rotate(-90)")
+    .attr("y", 6)
+    .attr("dy", ".71em")
+    .style("text-anchor", "end")
+    .text("SNDR_plot [dB]");
+
+  svg
+    .append("g")
+    .attr("class", "hulls")
+    .selectAll("polygon")
+    .data(nested)
+    .enter()
+    .append("polygon")
+    .attr("opacity", 0.1)
+    .attr("stroke-width", 30)
+    .attr("stroke-linejoin", "round")
+    .attr("fill", function(d) {
+      return color(d.key);
+    })
+    .attr("stroke", function(d) {
+      return color(d.key);
+    })
+    .attr("points", function(d) {
+      return d3.polygonHull(d.value);
+    });
+
+  svg
+    .append("g")
+    .attr("class", "dots")
+    .selectAll(".dot")
+    .data(data)
+    .enter()
+    .append("circle")
+    .attr("class", "dot")
+    .attr("r", 3.5)
+    .attr("cx", function(d) {
+      return x(d.x_aperture);
+    })
+    .attr("cy", function(d) {
+      return y(d.y_aperture);
+    })
+    .style("fill", function(d) {
+      return color(d.name_aperture);
+    });
+
+  var legend = svg
+    .selectAll(".legend")
+    .data(color.domain())
+    .enter()
+    .append("g")
+    .attr("class", "legend")
+    .attr("transform", function(d, i) {
+      return "translate(0," + i * 20 + ")";
+    });
+
+  legend
+    .append("rect")
+    .attr("x", width - 18)
+    .attr("width", 18)
+    .attr("height", 18)
+    .style("fill", color);
+
+  legend
+    .append("text")
+    .attr("x", width - 24)
+    .attr("y", 9)
+    .attr("dy", ".35em")
+    .style("text-anchor", "end")
+    .text(function(d) {
+      return d;
+    });
+});
+}
+
+function draw_Schreier_venn(){
+	var x = d3.scaleLog().range([ 0, width ]);
+var y = d3.scaleLinear().range([ height, 0]);
+
+var color = d3.scaleOrdinal(d3.schemeCategory10);
+
+var xAxis = d3.axisBottom(x);
+var yAxis = d3.axisLeft(y);
+
+var svg = d3
+  .select("#schreierfomspeed-venn")
+  .append("svg")
+  .attr("width", width + margin.left + margin.right)
+  .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+  .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  
+  
+  
+d3.tsv("output.tsv", function(error, data) {
+  if (error) throw error;
+
+  // Coerce the data to numbers.
+  data.forEach(function(d) {
+    d.x_schreier = +d.x_schreier;
+    d.y_schreier = +d.y_schreier;
+  });
+
+  x
+    .domain([100.0, 1.0E12])
+    .nice();
+  y
+    .domain([120,190])
+    .nice();
+
+
+  var nested = d3
+    .nest()
+    .key(function(d) {
+      return d.name_schreier;
+    })
+    .rollup(function(d) {
+      return d.map(function(v) {
+        return [x(v.x_schreier), y(v.y_schreier)];
+      });
+    })
+    .entries(data);
+
+  svg
+    .append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(xAxis)
+    .append("text")
+    .attr("fill", "black")
+    .attr("class", "label")
+    .attr("x", width)
+    .attr("y", -6)
+    .style("text-anchor", "end")
+    .text("fin_hf [Hz]");
+
+  svg
+    .append("g")
+    .attr("class", "y axis")
+    .call(yAxis)
+    .append("text")
+    .attr("fill", "black")
+    .attr("class", "label")
+    .attr("transform", "rotate(-90)")
+    .attr("y", 6)
+    .attr("dy", ".71em")
+    .style("text-anchor", "end")
+    .text("SNDR_plot [dB]");
+
+  svg
+    .append("g")
+    .attr("class", "hulls")
+    .selectAll("polygon")
+    .data(nested)
+    .enter()
+    .append("polygon")
+    .attr("opacity", 0.1)
+    .attr("stroke-width", 30)
+    .attr("stroke-linejoin", "round")
+    .attr("fill", function(d) {
+      return color(d.key);
+    })
+    .attr("stroke", function(d) {
+      return color(d.key);
+    })
+    .attr("points", function(d) {
+      return d3.polygonHull(d.value);
+    });
+
+  svg
+    .append("g")
+    .attr("class", "dots")
+    .selectAll(".dot")
+    .data(data)
+    .enter()
+    .append("circle")
+    .attr("class", "dot")
+    .attr("r", 3.5)
+    .attr("cx", function(d) {
+      return x(d.x_schreier);
+    })
+    .attr("cy", function(d) {
+      return y(d.y_schreier);
+    })
+    .style("fill", function(d) {
+      return color(d.name_schreier);
+    });
+
+  var legend = svg
+    .selectAll(".legend")
+    .data(color.domain())
+    .enter()
+    .append("g")
+    .attr("class", "legend")
+    .attr("transform", function(d, i) {
+      return "translate(0," + i * 20 + ")";
+    });
+
+  legend
+    .append("rect")
+    .attr("x", width - 18)
+    .attr("width", 18)
+    .attr("height", 18)
+    .style("fill", color);
+
+  legend
+    .append("text")
+    .attr("x", width - 24)
+    .attr("y", 9)
+    .attr("dy", ".35em")
+    .style("text-anchor", "end")
+    .text(function(d) {
+      return d;
+    });
+});
+}
+
+function venn(chart) {
+	switch(chart){
+		case 'aperture':
+			// Get the checkbox
+			var checkBox = document.getElementById("myCheck");
+			// Get the output text
+			var aperture = document.getElementById("aperture");
+			var aperture_venn = document.getElementById("aperture-venn");
+			// If the checkbox is checked, display the output text
+			if (checkBox.checked == true){
+				aperture_venn.style.display = "block";
+				aperture.style.display = "none";
+			} else {
+				aperture.style.display = "block";
+				aperture_venn.style.display = "none";
+			}
+			break;
+		case 'schreier':
+			// Get the checkbox
+			var checkBox = document.getElementById("myCheck3");
+			// Get the output text
+			var schreierfomspeed = document.getElementById("schreierfomspeed");
+			var schreierfomspeed_venn = document.getElementById("schreierfomspeed-venn");
+			// If the checkbox is checked, display the output text
+			if (checkBox.checked == true){
+				schreierfomspeed_venn.style.display = "block";
+				schreierfomspeed.style.display = "none";
+			} else {
+				schreierfomspeed.style.display = "block";
+				schreierfomspeed_venn.style.display = "none";
+			}
+			break;
+		case 'waldenfomspeed':
+			// Get the checkbox
+			var checkBox = document.getElementById("myCheck2");
+			// Get the output text
+			var waldenfomspeed = document.getElementById("waldenfomspeed");
+			var waldenfomspeed_venn = document.getElementById("waldenfomspeed-venn");
+			// If the checkbox is checked, display the output text
+			if (checkBox.checked == true){
+				waldenfomspeed_venn.style.display = "block";
+				waldenfomspeed.style.display = "none";
+			} else {
+				waldenfomspeed.style.display = "block";
+				waldenfomspeed_venn.style.display = "none";
+			}
+			break;
+		case 'energy':
+			// Get the checkbox
+			var checkBox = document.getElementById("myCheck1");
+			// Get the output text
+			var energy = document.getElementById("energy");
+			var energy_venn = document.getElementById("energy-venn");
+			// If the checkbox is checked, display the output text
+			if (checkBox.checked == true){
+				energy_venn.style.display = "block";
+				energy.style.display = "none";
+			} else {
+				energy.style.display = "block";
+				energy_venn.style.display = "none";
+			}
+			break;
+	}
+
+}
+</script>
